@@ -2,7 +2,12 @@ mod = angular.module('infinite-scroll', [])
 
 mod.directive 'infiniteScroll', ['$rootScope', '$window', '$timeout', ($rootScope, $window, $timeout) ->
   link: (scope, elem, attrs) ->
-    $window = angular.element($window)
+    if not attrs.container or attrs.container == 'window'
+      container = angular.element($window)
+    else if attrs.container == 'parent'
+      container = elem.parent()
+    else
+      throw Error('Container element doesn\'t supported')
 
     # infinite-scroll-distance specifies how close to the bottom of the page
     # the window is allowed to be before we trigger a new scroll. The value
@@ -35,10 +40,10 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$timeout', ($rootScop
     # with a boolean that is set to true when the function is
     # called in order to throttle the function call.
     handler = ->
-      windowBottom = $window.height() + $window.scrollTop()
+      containerBottom = container.height() + container.scrollTop()
       elementBottom = elem.offset().top + elem.height()
-      remaining = elementBottom - windowBottom
-      shouldScroll = remaining <= $window.height() * scrollDistance
+      remaining = elementBottom - containerBottom
+      shouldScroll = remaining <= container.height() * scrollDistance
 
       if shouldScroll && scrollEnabled
         if $rootScope.$$phase
@@ -48,9 +53,9 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$timeout', ($rootScop
       else if shouldScroll
         checkWhenEnabled = true
 
-    $window.on 'scroll', handler
+    container.on 'scroll', handler
     scope.$on '$destroy', ->
-      $window.off 'scroll', handler
+      container.off 'scroll', handler
 
     $timeout (->
       if attrs.infiniteScrollImmediateCheck
